@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         binding.messageTxt.text = message
 
         val startIntent = Intent(this, BootLogService::class.java)
-        startIntent.putExtra("BOOT_MESSAGE", "" + System.currentTimeMillis())
+        startIntent.putExtra("BOOT_MESSAGE", "" + message)
 
         val mPendingIntent = PendingIntent.getBroadcast(
             this,
