@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         val startIntent = Intent(this, BootLogService::class.java)
         startIntent.putExtra("BOOT_MESSAGE", "" + message)
 
-        val mPendingIntent = PendingIntent.getBroadcast(
+        val mPendingIntent = PendingIntent.getService(
             this,
             0,
             startIntent,
