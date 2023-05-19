@@ -1,5 +1,9 @@
 package com.example.testapp
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
@@ -9,7 +13,12 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
+import androidx.core.content.ContextCompat
+import com.example.testapp.constants.BOOT_TIME_KEY
+import com.example.testapp.constants.SHARED_PREFERENCES_BOOT
 import com.example.testapp.databinding.ActivityMainBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,35 +33,26 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
+        val sharedPreferences = applicationContext.getSharedPreferences(SHARED_PREFERENCES_BOOT, Context.MODE_PRIVATE)
+        val time = sharedPreferences.getLong(BOOT_TIME_KEY, 0L)
+        val message = if (time == 0L) "Boot not detected" else time.toString()
 
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
-        }
-    }
+        binding.messageTxt.text = message
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
+        val startIntent = Intent(this, BootLogService::class.java)
+        startIntent.putExtra("BOOT_MESSAGE", "" + System.currentTimeMillis())
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
+        val mPendingIntent = PendingIntent.getBroadcast(
+            this,
+            0,
+            startIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val mAlarmManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
+        mAlarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),
+            1000*15*60, mPendingIntent
+        )
     }
 }
