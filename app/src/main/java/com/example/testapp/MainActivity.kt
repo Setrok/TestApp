@@ -2,8 +2,10 @@ package com.example.testapp
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
@@ -25,6 +27,30 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
+    companion object {
+        const val ACTION_DATA = "com.example.testapp.DATA"
+        private val filters = arrayOf(ACTION_DATA)
+        private val intentFilter: IntentFilter by lazy {
+            IntentFilter().apply {
+                filters.forEach { addAction(it) }
+            }
+        }
+
+    }
+    inner class DataBroadcastReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                ACTION_DATA -> showData(intent)
+            }
+        }
+    }
+
+    fun showData(intent: Intent) {
+        binding.messageTxt.text = intent.getStringExtra("inputExtra") ?: "Something went wrong"
+    }
+
+    private lateinit var broadcastReceiver: MainActivity.DataBroadcastReceiver
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -33,14 +59,11 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        val sharedPreferences = applicationContext.getSharedPreferences(SHARED_PREFERENCES_BOOT, Context.MODE_PRIVATE)
-        val time = sharedPreferences.getLong(BOOT_TIME_KEY, 0L)
-        val message = if (time == 0L) "Boot not detected" else time.toString()
-
-        binding.messageTxt.text = message
+        broadcastReceiver = DataBroadcastReceiver()
+        applicationContext.registerReceiver(broadcastReceiver, intentFilter)
 
         val startIntent = Intent(this, BootLogService::class.java)
-        startIntent.putExtra("BOOT_MESSAGE", "" + message)
+        ContextCompat.startForegroundService(applicationContext, startIntent)
 
         val mPendingIntent = PendingIntent.getService(
             this,
@@ -54,5 +77,10 @@ class MainActivity : AppCompatActivity() {
             AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),
             1000*15*60, mPendingIntent
         )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        applicationContext.unregisterReceiver(broadcastReceiver)
     }
 }
